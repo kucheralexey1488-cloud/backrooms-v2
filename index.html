@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Backrooms: Clot Escape</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .hud-top {
+            display: flex;
+            justify-content: space-between;
+            color: #ffeb3b;
+            font-size: 20px;
+            text-shadow: 2px 2px 4px #000;
+            font-weight: bold;
+        }
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 8px;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border-radius: 50%;
+            pointer-events: none;
+            border: 1px solid #000;
+        }
+        #interaction-prompt {
+            position: absolute;
+            top: 58%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            background: rgba(0,0,0,0.7);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 16px;
+            display: none;
+            pointer-events: none;
+        }
+        #inventory {
+            background: rgba(0,0,0,0.8);
+            border: 2px solid #ffeb3b;
+            padding: 10px;
+            border-radius: 8px;
+            color: #fff;
+            max-width: 300px;
+            pointer-events: auto;
+        }
+        #inventory h3 {
+            margin: 0 0 8px 0;
+            color: #ffeb3b;
+            font-size: 16px;
+            text-align: center;
+        }
+        .inv-item {
+            font-size: 14px;
+            margin: 4px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        #instructions-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 10, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #ffeb3b;
+            z-index: 10;
+            pointer-events: auto;
+            text-align: center;
+            padding: 20px;
+        }
+        #instructions-screen h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            color: #fff;
+            text-shadow: 0 0 10px #ffeb3b;
+        }
+        #instructions-screen p {
+            font-size: 16px;
+            max-width: 650px;
+            line-height: 1.5;
+            color: #ccc;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #ffeb3b;
+            color: #000;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            box-shadow: 0 0 15px rgba(255, 235, 59, 0.5);
+            transition: 0.2s;
+        }
+        .btn:hover {
+            background: #fff;
+            transform: scale(1.05);
+        }
+        #modal-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 5;
+            pointer-events: auto;
+        }
+        .modal-content {
+            background: #1a1a1a;
+            border: 3px solid #ffeb3b;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            color: #fff;
+            max-width: 400px;
+        }
+        .modal-content input {
+            padding: 10px;
+            font-size: 20px;
+            width: 150px;
+            text-align: center;
+            background: #000;
+            color: #ffeb3b;
+            border: 2px solid #ffeb3b;
+            margin: 15px 0;
+            font-family: monospace;
+        }
+    </style>
+    <!-- Подключаем Three.js через CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+    <div id="instructions-screen">
+        <h1>THE BACKROOMS: CLOT ESCAPE</h1>
+        <p>Вы заперты в бесконечном желтом лабиринте. За вами охотится чернильный паук <b>Клот</b> с шестью лапами. Соберите <b>7 частей лестницы</b>, <b>2 ключа</b>, <b>карту доступа</b>, а также соедините <b>фотографию</b> с <b>проявительной жидкостью</b> в инвентаре, чтобы узнать секретный 4-значный код от центрального выхода!<br><br>
+        <b>Управление:</b><br>
+        • Движение: <b>WASD</b> или <b>Стрелки</b><br>
+        • Бег: <b>Shift</b> | Присед: <b>Ctrl</b><br>
+        • Осмотр: Движение мыши (кликните для захвата экрана)<br>
+        • Фонарик: <b>F</b> | Подобрать предмет: <b>E</b></p>
+        <button class="btn" id="start-btn">ВОЙТИ В ЛАБИРИНТ</button>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <div id="ui">
+        <div class="hud-top">
+            <div id="objectives">Лестница: 0/7 | Ключи: 0/2 | Карта: НЕТ</div>
+            <div id="flashlight-status">Фонарик [F]: ВЫКЛ</div>
+        </div>
+        <div style="display: flex; justify-content: flex-end;">
+            <div id="inventory">
+                <h3>ИНВЕНТАРЬ</h3>
+                <div id="inv-list">Пусто</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="crosshair"></div>
+    <div id="interaction-prompt">Нажмите [E] чтобы подобрать</div>
+
+    <div id="modal-overlay">
+        <div class="modal-content" id="modal-body"></div>
+    </div>
+
+<script>
+    let scene, camera, renderer;
+    let isPlaying = false;
+    let audioCtx = null;
+
+    const inventory = {
+        ladderParts: 0,
+        keys: 0,
+        hasPhoto: false,
+        hasDeveloper: false,
+        developedPhoto: false,
+        hasCard: false
+    };
+    let secretCode = Math.floor(1000 + Math.random() * 9000).toString();
+    let gameWon = false;
+    let gameOver = false;
+
+    const keys = { w: false, a: false, s: false, d: false, shift: false, ctrl: false };
+    
+    const player = {
+        position: new THREE.Vector3(0, 1.7, 0),
+        velocity: new THREE.Vector3(),
+        rotation: { x: 0, y: 0 },
+        height: 1.7,
+        speed: 4.5,
+        flashlightOn: false
+    };
+
+    const worldObjects = []; 
+    const interactiveItems = []; 
+    let clotMesh = null;
+    const clotState = {
+        position: new THREE.Vector3(20, 0, 20),
+        target: new THREE.Vector3(),
+        speed: 2.2,
+        state: 'patrol',
+        timer: 0
+    };
+
+    let flashlightLight;
+    let ambientLight;
+
+    const labSize = 10; 
+    const tileSize = 10;
+    const mapGrid = [];
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+        document.getElementById('instructions-screen').style.display = 'none';
+        initAudio();
+        initGame();
+        isPlaying = document.body.requestPointerLock ? document.body.requestPointerLock() : true;
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isPlaying || gameWon || gameOver) return;
+        const sensitivity = 0.002;
+        player.rotation.y -= e.movementX * sensitivity;
+        player.rotation.x -= e.movementY * sensitivity;
+        player.rotation.x = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, player.rotation.x));
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (!isPlaying) return;
+        const code = e.code;
+        const key = e.key.toLowerCase();
+
+        if (code === 'KeyW' || key === 'w' || code === 'ArrowUp') keys.w = true;
+        if (code === 'KeyS' || key === 's' || code === 'ArrowDown') keys.s = true;
+        if (code === 'KeyA' || key === 'a' || code === 'ArrowLeft') keys.a = true;
+        if (code === 'KeyD' || key === 'd' || code === 'ArrowRight') keys.d = true;
+        if (code === 'ShiftLeft' || code === 'ShiftRight') keys.shift = true;
+        if (code === 'ControlLeft' || code === 'ControlRight') {
+            keys.ctrl = true;
+            player.height = 1.0;
+        }
+        if (code === 'KeyF' || key === 'f') {
+            player.flashlightOn = !player.flashlightOn;
+            if (flashlightLight) flashlightLight.visible = player.flashlightOn;
+            document.getElementById('flashlight-status').innerText = `Фонарик [F]: ${player.flashlightOn ? 'ВКЛ' : 'ВЫКЛ'}`;
+        }
+        if (code === 'KeyE' || key === 'e') {
+            checkInteraction();
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        const code = e.code;
+        const key = e.key.toLowerCase();
+
+        if (code === 'KeyW' || key === 'w' || code === 'ArrowUp') keys.w = false;
+        if (code === 'KeyS' || key === 's' || code === 'ArrowDown') keys.s = false;
+        if (code === 'KeyA' || key === 'a' || code === 'ArrowLeft') keys.a = false;
+        if (code === 'KeyD' || key === 'd' || code === 'ArrowRight') keys.d = false;
+        if (code === 'ShiftLeft' || code === 'ShiftRight') keys.shift = false;
+        if (code === 'ControlLeft' || code === 'ControlRight') {
+            keys.ctrl = false;
+            player.height = 1.7;
+        }
+    });
+
+    function initAudio() {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    function playClotSound(type) {
+        if (!audioCtx) return;
+        try {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            if (type === 'squish') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(80, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.15);
+            } else if (type === 'growl') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(55, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(40, audioCtx.currentTime + 0.6);
+                gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.6);
+            }
+        } catch(e) {}
+    }
+
+    function initGame() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xd4af37);
+        scene.fog = new THREE.FogExp2(0xc8b12e, 0.035);
+
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+
+        ambientLight = new THREE.AmbientLight(0xffea88, 0.6);
+        scene.add(ambientLight);
+
+        flashlightLight = new THREE.SpotLight(0xfffaed, 2.5, 30, Math.PI / 5, 0.5, 1);
+        flashlightLight.position.set(0, 0, 0);
+        flashlightLight.target.position.set(0, 0, -10);
+        flashlightLight.visible = false;
+        camera.add(flashlightLight);
+        camera.add(flashlightLight.target);
+        scene.add(camera);
+
+        buildLabyrinth();
+        spawnItems();
+        spawnClot();
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        window.addEventListener('resize', onWindowResize);
+        animate();
+    }
+
+    function buildLabyrinth() {
+        for (let x = 0; x < labSize; x++) {
+            mapGrid[x] = [];
+            for (let z = 0; z < labSize; z++) {
+                let isWall = (x === 0 || x === labSize - 1 || z === 0 || z === labSize - 1) ? (Math.random() < 0.8) : (Math.random() < 0.3);
+                if (x === 1 && z === 1) isWall = false;
+                if (x === Math.floor(labSize/2) && z === Math.floor(labSize/2)) isWall = false;
+                mapGrid[x][z] = isWall ? 1 : 0;
+            }
+        }
+
+        const wallMat = new THREE.MeshStandardMaterial({ color: 0xdbd173, roughness: 0.9 });
+        const carpetMat = new THREE.MeshStandardMaterial({ color: 0x967c3e, roughness: 0.8 });
+        const ceilingMat = new THREE.MeshStandardMaterial({ color: 0xd9cf75, roughness: 0.9 });
+
+        const wallGeo = new THREE.BoxGeometry(tileSize, 4, tileSize);
+
+        const floorGeo = new THREE.PlaneGeometry(labSize * tileSize, labSize * tileSize);
+        const floor = new THREE.Mesh(floorGeo, carpetMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.position.set((labSize * tileSize) / 2 - tileSize/2, 0, (labSize * tileSize) / 2 - tileSize/2);
+        scene.add(floor);
+
+        const ceiling = new THREE.Mesh(floorGeo, ceilingMat);
+        ceiling.rotation.x = Math.PI / 2;
+        ceiling.position.set((labSize * tileSize) / 2 - tileSize/2, 4, (labSize * tileSize) / 2 - tileSize/2);
+        scene.add(ceiling);
+
+        for (let x = 0; x < labSize; x++) {
+            for (let z = 0; z < labSize; z++) {
+                const posX = x * tileSize;
+                const posZ = z * tileSize;
+
+                if (mapGrid[x][z] === 1) {
+                    const wall = new THREE.Mesh(wallGeo, wallMat);
+                    wall.position.set(posX, 2, posZ);
+                    scene.add(wall);
+                    worldObjects.push({
+                        box: new THREE.Box3().setFromObject(wall),
+                        mesh: wall
+                    });
+                } else {
+                    if (Math.random() < 0.4) {
+                        const lightMesh = new THREE.Mesh(new THREE.BoxGeometry(2, 0.1, 1), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+                        lightMesh.position.set(posX, 3.9, posZ);
+                        scene.add(lightMesh);
+
+                        const pointLight = new THREE.PointLight(0xfffaed, 0.8, 12);
+                        pointLight.position.set(posX, 3.7, posZ);
+                        scene.add(pointLight);
+                    }
+                }
+            }
+        }
+
+        const centerX = Math.floor(labSize / 2) * tileSize;
+        const centerZ = Math.floor(labSize / 2) * tileSize;
+        player.position.set(1.5, 1.7, 1.5);
+
+        const exitGeo = new THREE.BoxGeometry(3, 3, 0.5);
+        const exitMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.2 });
+        const exitDoor = new THREE.Mesh(exitGeo, exitMat);
+        exitDoor.position.set(centerX, 1.5, centerZ);
+        exitDoor.userData = { type: 'exit' };
+        scene.add(exitDoor);
+        interactiveItems.push(exitDoor);
+    }
+
+    function spawnItems() {
+        const itemTypes = [];
+        for (let i = 0; i < 7; i++) itemTypes.push('ladder');
+        itemTypes.push('key', 'key');
+        itemTypes.push('photo');
+        itemTypes.push('developer');
+        itemTypes.push('card');
+
+        itemTypes.forEach(type => {
+            let placed = false;
+            while (!placed) {
+                let rx = Math.floor(Math.random() * (labSize - 2)) + 1;
+                let rz = Math.floor(Math.random() * (labSize - 2)) + 1;
+                if (mapGrid[rx][rz] === 0) {
+                    const item = createItemMesh(type);
+                    item.position.set(rx * tileSize + (Math.random() - 0.5) * 4, 0.5, rz * tileSize + (Math.random() - 0.5) * 4);
+                    item.userData = { type: type, collected: false };
+                    scene.add(item);
+                    interactiveItems.push(item);
+                    placed = true;
+                }
+            }
+        });
+    }
+
+    function createItemMesh(type) {
+        let geo, mat;
+        if (type === 'ladder') {
+            geo = new THREE.BoxGeometry(0.8, 1.5, 0.2);
+            mat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b });
+        } else if (type === 'key') {
+            geo = new THREE.CylinderGeometry(0.1, 0.1, 0.6);
+            mat = new THREE.MeshStandardMaterial({ color: 0xffd700, metalness: 0.8 });
+        } else if (type === 'photo') {
+            geo = new THREE.BoxGeometry(0.4, 0.02, 0.5);
+            mat = new THREE.MeshStandardMaterial({ color: 0xdddddd });
+        } else if (type === 'developer') {
+            geo = new THREE.CylinderGeometry(0.3, 0.3, 0.8);
+            mat = new THREE.MeshStandardMaterial({ color: 0x228b22 });
+        } else if (type === 'card') {
+            geo = new THREE.BoxGeometry(0.5, 0.02, 0.3);
+            mat = new THREE.MeshStandardMaterial({ color: 0x00ffff });
+        }
+        return new THREE.Mesh(geo, mat);
+    }
+
+    function spawnClot() {
+        const clotGroup = new THREE.Group();
+        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: 0.1, metalness: 0.9 });
+        
+        const body = new THREE.Mesh(new THREE.SphereGeometry(1.2, 16, 16), bodyMat);
+        body.position.y = 1.0;
+        clotGroup.add(body);
+
+        const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), eyeMat);
+        eye1.position.set(0.4, 1.3, -1.0);
+        const eye2 = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), eyeMat);
+        eye2.position.set(-0.4, 1.3, -1.0);
+        clotGroup.add(eye1);
+        clotGroup.add(eye2);
+
+        for (let i = 0; i < 6; i++) {
+            const legGeo = new THREE.CylinderGeometry(0.08, 0.04, 3);
+            const leg = new THREE.Mesh(legGeo, bodyMat);
+            leg.rotation.z = (i < 3 ? 1 : -1) * 0.7;
+            leg.rotation.y = (i % 3) * 1.2;
+            leg.position.y = 0.8;
+            clotGroup.add(leg);
+        }
+
+        clotGroup.position.set(15, 0, 15);
+        scene.add(clotGroup);
+        clotMesh = clotGroup;
+    }
+
+    function triggerJumpscare() {
+        if (gameOver || gameWon) return;
+        gameOver = true;
+        document.exitPointerLock();
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('modal-body').innerHTML = `
+            <h2 style="color: #ff0000; font-size: 28px;">ВАС ПОЙМАЛ КЛОТ!</h2>
+            <p>Чернильный паук разорвал вас в темноте Закулисья...</p>
+            <button class="btn" onclick="location.reload()">ЗАНОВО</button>
+        `;
+    }
+
+    function checkInteraction() {
+        let closestItem = null;
+        let minDist = 3.5;
+
+        interactiveItems.forEach(item => {
+            if (item.userData.collected) return;
+            const dist = player.position.distanceTo(item.position);
+            if (dist < minDist) {
+                minDist = dist;
+                closestItem = item;
+            }
+        });
+
+        if (closestItem) {
+            const type = closestItem.userData.type;
+            if (type === 'exit') {
+                openExitTerminal();
+                return;
+            }
+
+            closestItem.userData.collected = true;
+            scene.remove(closestItem);
+
+            if (type === 'ladder') inventory.ladderParts++;
+            else if (type === 'key') inventory.keys++;
+            else if (type === 'photo') inventory.hasPhoto = true;
+            else if (type === 'developer') inventory.hasDeveloper = true;
+            else if (type === 'card') inventory.hasCard = true;
+
+            updateInventoryUI();
+            checkCombination();
+        }
+    }
+
+    function checkCombination() {
+        if (inventory.hasPhoto && inventory.hasDeveloper && !inventory.developedPhoto) {
+            inventory.developedPhoto = true;
+            showModalMessage(`ПРОЯВЛЕННОЕ ФОТО:<br><h1 style="color:#ffeb3b; font-size:40px; margin:10px 0;">${secretCode}</h1><p>Запомните этот код от замка в центре!</p>`, true);
+        }
+    }
+
+    function showModalMessage(htmlContent, closable = false) {
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('modal-body').innerHTML = htmlContent + (closable ? '<br><br><button class="btn" onclick="closeModal()">ПОНЯТЬ</button>' : '');
+    }
+
+    window.closeModal = function() {
+        document.getElementById('modal-overlay').style.display = 'none';
+        if (isPlaying) document.body.requestPointerLock();
+    }
+
+    function openExitTerminal() {
+        if (inventory.ladderParts < 7 || inventory.keys < 2 || !inventory.hasCard) {
+            showModalMessage(`<h3>ВХОД ЗАБЛОКИРОВАН</h3><p>Необходимо собрать:<br>• Лестница: ${inventory.ladderParts}/7<br>• Ключи: ${inventory.keys}/2<br>• Карта доступа: ${inventory.hasCard ? 'ЕСТЬ' : 'НЕТ'}</p>`, true);
+            return;
+        }
+
+        document.exitPointerLock();
+        document.getElementById('modal-overlay').style.display = 'flex';
+        document.getElementById('modal-body').innerHTML = `
+            <h3>ЭЛЕКТРОННЫЙ ЗАМОК</h3>
+            <p>Введите 4-значный код с фотографии:</p>
+            <input type="password" id="code-input" maxlength="4"><br>
+            <button class="btn" onclick="verifyCode()">РАЗБЛОКИРОВАТЬ</button>
+        `;
+    }
+
+    window.verifyCode = function() {
+        const val = document.getElementById('code-input').value;
+        if (val === secretCode) {
+            gameWon = true;
+            document.getElementById('modal-body').innerHTML = `
+                <h1 style="color: #00ff00; font-size: 32px;">ВЫ ПОБЕЖДАЛИ!</h1>
+                <p>Вы собрали лестницу, выбрались из огромного лабиринта Закулисья и сбежали от Клота!</p>
+                <button class="btn" onclick="location.reload()">ИГРАТЬ СНОВА</button>
+            `;
+        } else {
+            alert('Неверный код!');
+        }
+    }
+
+    function updateInventoryUI() {
+        document.getElementById('objectives').innerText = `Лестница: ${inventory.ladderParts}/7 | Ключи: ${inventory.keys}/2 | Карта: ${inventory.hasCard ? 'ДА' : 'НЕТ'}`;
+        
+        let html = '';
+        if (inventory.ladderParts > 0) html += `<div class="inv-item"><span>Лестница</span><span>${inventory.ladderParts}/7</span></div>`;
+        if (inventory.keys > 0) html += `<div class="inv-item"><span>Ключи</span><span>${inventory.keys}/2</span></div>`;
+        if (inventory.hasPhoto) html += `<div class="inv-item"><span>Фотография</span><span>1</span></div>`;
+        if (inventory.hasDeveloper) html += `<div class="inv-item"><span>Проявитель</span><span>1</span></div>`;
+        if (inventory.developedPhoto) html += `<div class="inv-item" style="color:#ffeb3b"><span>Код на фото:</span><span>${secretCode}</span></div>`;
+        if (inventory.hasCard) html += `<div class="inv-item"><span>Карта доступа</span><span>ЕСТЬ</span></div>`;
+
+        const invListEl = document.getElementById('inv-list');
+        if (invListEl) invListEl.innerHTML = html || 'Пусто';
+    }
+
+    function checkCollision(pos) {
+        const playerBox = new THREE.Box3(
+            new THREE.Vector3(pos.x - 0.4, pos.y - player.height, pos.z - 0.4),
+            new THREE.Vector3(pos.x + 0.4, pos.y + 0.5, pos.z + 0.4)
+        );
+
+        for (let obj of worldObjects) {
+            if (playerBox.intersectsBox(obj.box)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    let clock = new THREE.Clock();
+    let stepTimer = 0;
+
+    function animate() {
+        requestAnimationFrame(animate);
+
+        const delta = clock.getDelta();
+
+        if (isPlaying && !gameWon && !gameOver) {
+            let moveSpeed = player.speed * (keys.shift ? 1.6 : (keys.ctrl ? 0.6 : 1.0)) * delta;
+            
+            const dir = new THREE.Vector3();
+            const forward = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.y);
+            const side = new THREE.Vector3(1, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), player.rotation.y);
+
+            if (keys.w) dir.add(forward);
+            if (keys.s) dir.sub(forward);
+            if (keys.a) dir.sub(side);
+            if (keys.d) dir.add(side);
+            dir.normalize();
+
+            let nextX = player.position.clone().add(new THREE.Vector3(dir.x * moveSpeed, 0, 0));
+            if (!checkCollision(nextX)) player.position.x = nextX.x;
+
+            let nextZ = player.position.clone().add(new THREE.Vector3(0, 0, dir.z * moveSpeed));
+            if (!checkCollision(nextZ)) player.position.z = nextZ.z;
+
+            camera.position.copy(player.position);
+            camera.rotation.set(0, 0, 0);
+            camera.rotateY(player.rotation.y);
+            camera.rotateX(player.rotation.x);
+
+            let showPrompt = false;
+            interactiveItems.forEach(item => {
+                if (!item.userData.collected && player.position.distanceTo(item.position) < 3.5) {
+                    showPrompt = true;
+                }
+            });
+            document.getElementById('interaction-prompt').style.display = showPrompt ? 'block' : 'none';
+
+            if (clotMesh) {
+                const distToPlayer = clotMesh.position.distanceTo(player.position);
+
+                stepTimer += delta;
+                if (stepTimer > (distToPlayer < 10 ? 0.35 : 0.7)) {
+                    stepTimer = 0;
+                    if (distToPlayer < 25) {
+                        playClotSound('squish');
+                        if (distToPlayer < 12 && Math.random() < 0.3) {
+                            playClotSound('growl');
+                        }
+                    }
+                }
+
+                if (distToPlayer < 15) {
+                    clotState.state = 'chase';
+                    clotMesh.position.lerp(player.position, clotState.speed * 1.3 * delta);
+                } else {
+                    clotState.state = 'patrol';
+                    clotState.timer += delta;
+                    if (clotState.timer > 4) {
+                        clotState.timer = 0;
+                        let rx = (Math.random() * labSize * tileSize);
+                        let rz = (Math.random() * labSize * tileSize);
+                        clotState.target.set(rx, 0, rz);
+                    }
+                    clotMesh.position.lerp(clotState.target, clotState.speed * 0.5 * delta);
+                }
+
+                clotMesh.lookAt(player.position.x, clotMesh.position.y, player.position.z);
+
+                if (distToPlayer < 1.8) {
+                    triggerJumpscare();
+                }
+            }
+        }
+
+        renderer.render(scene, camera);
+    }
+</script>
+</body>
+</html>
